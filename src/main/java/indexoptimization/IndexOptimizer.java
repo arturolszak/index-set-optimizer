@@ -136,15 +136,15 @@ public class IndexOptimizer {
 
         List<Pair<Index, Index>> remainingCcPairs = new ArrayList<>();
         for (Pair<Index, Index> pair : containedContainingIndexPairs) {
-            Index currContaning = pair.getRight();
+            Index currContaining = pair.getRight();
             Index currContained = pair.getLeft();
 
             //remove all pairs that has the removed index in contained or containing
-            if (removed.equals(currContaning) || removed.equals(currContained)) {
+            if (removed.equals(currContaining) || removed.equals(currContained)) {
                 continue;
             }
 
-            if (currContaning == oldContaining) {
+            if (currContaining == oldContaining) {
                 //as the containing has additional constraints now, we need to recheck whether it still contains the
                 // contained
                 if (isContained(currContained, constrainedContainingIndex)) {

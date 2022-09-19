@@ -5,7 +5,7 @@ import java.util.List;
 
 public class Index {
 
-    List<IndexFieldSet> fieldSets;
+    final List<IndexFieldSet> fieldSets;
 
     public Index() {
         fieldSets = new ArrayList<>();
