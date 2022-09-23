@@ -88,7 +88,7 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(is -> is.toString())
+                .map(is -> is.toStringSorted())
                 .collect(Collectors.toList());
         Assertions.assertEquals(2, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{y,z}{x}}"));
