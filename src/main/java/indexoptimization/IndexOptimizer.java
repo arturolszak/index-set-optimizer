@@ -182,7 +182,7 @@ public class IndexOptimizer {
             Index containingIndex = indexes.get(i);
             for (int j = i + 1; j < indexes.size(); j++) {
                 Index containedIndex = indexes.get(j);
-                if (containingIndex.getLength() > containedIndex.getLength()
+                if (containingIndex.getLength() >= containedIndex.getLength()
                                                     && isContained(containedIndex, containingIndex)) {
                     pairs.add(Pair.of(containedIndex, containingIndex));
                 }

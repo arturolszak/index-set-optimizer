@@ -2,11 +2,16 @@ package indexoptimization;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.contains;
 
 class IndexOptimizerTest {
     @Test
@@ -202,6 +207,58 @@ class IndexOptimizerTest {
         Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{g}}"));
+    }
+
+    @Test
+    @DisplayName("duplicates are removed")
+    public void testWithSmallestIndexSetStrategyWithoutMemoization2() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{a,b}}",
+                "{{a,b}}"
+        });
+
+        // Act
+        List<Index> optimizedIndexes = createOptimizer().optimizeIndexes(indexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(1));
+        assertThat(outputIndexStrings, contains("{{a,b}}"));
+    }
+
+    @Test
+    @DisplayName("duplicates are removed (reversed order)")
+    public void testWithSmallestIndexSetStrategyWithoutMemoization3() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{a,b}}",
+                "{{b,a}}"
+        });
+
+        // Act
+        List<Index> optimizedIndexes = createOptimizer().optimizeIndexes(indexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(1));
+        assertThat(outputIndexStrings, contains("{{a,b}}"));
+    }
+
+    private List<Index> parseInputStrings(String[] inputIndexStrings) {
+        return Arrays.stream(inputIndexStrings)
+                .map(Index::parseIndex)
+                .collect(Collectors.toList());
+    }
+
+    private IndexOptimizer createOptimizer() {
+        IndexOptimizer indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
+        indexOptimizer.setMemoize(false);
+        return indexOptimizer;
     }
 
 }
