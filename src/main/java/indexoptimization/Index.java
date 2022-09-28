@@ -26,7 +26,7 @@ public class Index {
         return new ArrayList<>(fieldSets);
     }
 
-    public void addFieldSet(IndexFieldSet indexFieldSet) {
+    void addFieldSet(IndexFieldSet indexFieldSet) {
         fieldSets.add(indexFieldSet);
     }
 

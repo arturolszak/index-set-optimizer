@@ -25,7 +25,7 @@ public class IndexFieldSet {
         return new HashSet<>(fields);
     }
 
-    public void add(IndexField field) {
+    void add(IndexField field) {
         fields.add(field);
     }
 
@@ -33,7 +33,7 @@ public class IndexFieldSet {
         return fields.contains(field);
     }
 
-    public void remove(IndexField field) {
+    void remove(IndexField field) {
         fields.remove(field);
     }
 
