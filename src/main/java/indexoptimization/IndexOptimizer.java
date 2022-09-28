@@ -3,7 +3,6 @@ package indexoptimization;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -32,11 +31,12 @@ public class IndexOptimizer {
 
     public List<Index> optimizeIndexes(List<Index> indexes) {
         indexes = sanitizeIndexes(indexes);
-        List<Index> indexesSorted = indexes.stream()
-            .sorted(Comparator.comparing(ind -> ((Index)ind).getLength()).reversed())
-            .collect(Collectors.toList());
-
-        return optimizeSortedIndexes(indexesSorted);
+        List<Pair<Index, Index>> containedContainingIndexPairs = calculateContainedContainingIndexPairs(indexes);
+        if (!containedContainingIndexPairs.isEmpty()) {
+            return optimizeIndexesRecursive(indexes, containedContainingIndexPairs);
+        } else {
+            return indexes;
+        }
     }
 
     private List<Index> sanitizeIndexes(List<Index> indexes) {
@@ -71,15 +71,6 @@ public class IndexOptimizer {
             .filter(fieldSet -> fieldSet.getLength() > 0)
             .collect(Collectors.toCollection(ArrayList::new));
         return new Index(newFieldSets);
-    }
-
-    private List<Index> optimizeSortedIndexes(List<Index> indexes) {
-        List<Pair<Index, Index>> containedContainingIndexPairs = calculateContainedContainingIndexPairs(indexes);
-        if (!containedContainingIndexPairs.isEmpty()) {
-            return optimizeIndexesRecursive(indexes, containedContainingIndexPairs);
-        } else {
-            return indexes;
-        }
     }
 
     private List<Index> optimizeIndexesRecursive(List<Index> indexes, List<Pair<Index, Index>> containedContainingIndexPairs) {
@@ -220,10 +211,11 @@ public class IndexOptimizer {
         // look for contained indexes only after the analyzed containing index (they are sorted by length desc)
         for (int i = 0; i < indexes.size(); i++) {
             Index containingIndex = indexes.get(i);
-            for (int j = i + 1; j < indexes.size(); j++) {
+            for (int j = 0; j < indexes.size(); j++) {
                 Index containedIndex = indexes.get(j);
-                if (containingIndex.getLength() >= containedIndex.getLength()
-                                                    && isContained(containedIndex, containingIndex)) {
+                if (i != j
+                        && containingIndex.getLength() >= containedIndex.getLength()
+                        && isContained(containedIndex, containingIndex)) {
                     pairs.add(Pair.of(containedIndex, containingIndex));
                 }
             }
