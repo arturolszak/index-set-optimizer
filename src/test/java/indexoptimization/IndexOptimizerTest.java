@@ -42,7 +42,7 @@ class IndexOptimizerTest {
         };
 
         List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(s -> Index.parseIndex(s))
+                .map(Index::parseIndex)
                 .collect(Collectors.toList());
 
         // Act
@@ -55,7 +55,7 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(is -> is.toStringSorted())
+                .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
@@ -75,7 +75,7 @@ class IndexOptimizerTest {
         };
 
         List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(s -> Index.parseIndex(s))
+                .map(Index::parseIndex)
                 .collect(Collectors.toList());
 
         // Act
@@ -89,7 +89,7 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(is -> is.toStringSorted())
+                .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(2, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{y,z}{x}}"));
@@ -109,7 +109,7 @@ class IndexOptimizerTest {
         };
 
         List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(s -> Index.parseIndex(s))
+                .map(Index::parseIndex)
                 .collect(Collectors.toList());
 
         // Act
@@ -123,7 +123,7 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(is -> is.toStringSorted())
+                .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
@@ -145,7 +145,7 @@ class IndexOptimizerTest {
         };
 
         List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(s -> Index.parseIndex(s))
+                .map(Index::parseIndex)
                 .collect(Collectors.toList());
 
         // Act
@@ -187,7 +187,7 @@ class IndexOptimizerTest {
         };
 
         List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(s -> Index.parseIndex(s))
+                .map(Index::parseIndex)
                 .collect(Collectors.toList());
 
         // Act
@@ -200,7 +200,7 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(is -> is.toStringSorted())
+                .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(5, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{a,d,f,g,j,n,r,t,z}}"));

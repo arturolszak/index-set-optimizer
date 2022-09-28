@@ -69,7 +69,7 @@ public class IndexOptimizer {
     private static Index removeEmptyFieldSets(Index index) {
         List<IndexFieldSet> newFieldSets = index.fieldSets.stream()
             .filter(fieldSet -> fieldSet.getLength() > 0)
-            .collect(Collectors.toCollection(() -> new ArrayList<>()));
+            .collect(Collectors.toCollection(ArrayList::new));
         return new Index(newFieldSets);
     }
 
