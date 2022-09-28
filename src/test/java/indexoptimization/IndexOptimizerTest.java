@@ -15,6 +15,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.contains;
 
 class IndexOptimizerTest {
+
     @Test
     public void testParseAndToString() {
         String indexStr = "{{a,d,f,g,j,n,r,t,z}}";
@@ -41,9 +42,7 @@ class IndexOptimizerTest {
                 "{{g}}"
         };
 
-        List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(Index::parseIndex)
-                .collect(Collectors.toList());
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
 
         // Act
         IndexOptimizer indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
@@ -55,7 +54,7 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(Index::toStringSorted)
+                .map(is -> is.toStringSorted())
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
@@ -74,13 +73,10 @@ class IndexOptimizerTest {
                 "{{x}}"
         };
 
-        List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(Index::parseIndex)
-                .collect(Collectors.toList());
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
 
         // Act
-        IndexOptimizer indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
-        indexOptimizer.setMemoize(false);
+        IndexOptimizer indexOptimizer = createOptimizer();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
 
         // Assert
@@ -108,13 +104,10 @@ class IndexOptimizerTest {
                 "{{g}}"
         };
 
-        List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(Index::parseIndex)
-                .collect(Collectors.toList());
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
 
         // Act
-        IndexOptimizer indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
-        indexOptimizer.setMemoize(false);
+        IndexOptimizer indexOptimizer = createOptimizer();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
 
         // Assert
@@ -123,91 +116,12 @@ class IndexOptimizerTest {
         }
 
         List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(Index::toStringSorted)
+                .map(is -> is.toStringSorted())
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
-    }
-
-    @Disabled
-    @Test
-    public void compareTimesWithAndWithoutMemoization() {
-
-        // Arrange
-        String[] inputIndexStrings = {
-                "{{a,d,f,g,j,n,r,t,z}}",
-                "{{d,g,r}}",
-                "{{a,z}}",
-                "{{b,r}}",
-                "{{g}}"
-        };
-
-        List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(Index::parseIndex)
-                .collect(Collectors.toList());
-
-        // Act
-        IndexOptimizer indexOptimizer;
-        long t1, t2;
-
-        indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
-        indexOptimizer.setMemoize(false);
-        t1 = System.currentTimeMillis();
-        for (int i = 0; i < 1000; i++) {
-            indexOptimizer.optimizeIndexes(indexes);
-        }
-        t2 = System.currentTimeMillis();
-        System.out.println("Execution time (without memoization): " + (t2 - t1));
-
-        indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
-        indexOptimizer.setMemoize(true);
-        t1 = System.currentTimeMillis();
-        for (int i = 0; i < 1000; i++) {
-            indexOptimizer.optimizeIndexes(indexes);
-        }
-        t2 = System.currentTimeMillis();
-        System.out.println("Execution time (with memoization):    " + (t2 - t1));
-
-
-
-    }
-
-    @Test
-    public void testWithLargestIndexSetStrategy() {
-
-        // Arrange
-        String[] inputIndexStrings = {
-                "{{a,d,f,g,j,n,r,t,z}}",
-                "{{d,g,r}}",
-                "{{a,z}}",
-                "{{b,r}}",
-                "{{g}}"
-        };
-
-        List<Index> indexes = Arrays.stream(inputIndexStrings)
-                .map(Index::parseIndex)
-                .collect(Collectors.toList());
-
-        // Act
-        IndexOptimizer indexOptimizer = new IndexOptimizer(new LargestIndexListSelectionStrategy());
-        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
-
-        // Assert
-        for (Index optimizedIndex : optimizedIndexes) {
-            System.out.println(optimizedIndex.toStringSorted());
-        }
-
-        List<String> outputIndexStrings = optimizedIndexes.stream()
-                .map(Index::toStringSorted)
-                .collect(Collectors.toList());
-        Assertions.assertEquals(5, outputIndexStrings.size());
-        Assertions.assertTrue(outputIndexStrings.contains("{{a,d,f,g,j,n,r,t,z}}"));
-        Assertions.assertTrue(outputIndexStrings.contains("{{d,g,r}}"));
-        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
-        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
-        Assertions.assertTrue(outputIndexStrings.contains("{{g}}"));
     }
 
     @Test
@@ -251,6 +165,26 @@ class IndexOptimizerTest {
     }
 
     @Test
+    @DisplayName("order restriction is enforced")
+    public void testWithSmallestIndexSetStrategyWithoutMemoization4() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{a,c}}",
+                "{{a}{b}{c}}"
+        });
+
+        // Act
+        List<Index> optimizedIndexes = createOptimizer().optimizeIndexes(indexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(2));
+        assertThat(outputIndexStrings, containsInAnyOrder("{{a,c}}","{{a}{b}{c}}"));
+    }
+
+    @Test
     @DisplayName("optimization with empty field set")
     public void testWithSmallestIndexSetStrategyWithoutMemoization5() {
         // Arrange
@@ -270,16 +204,111 @@ class IndexOptimizerTest {
         assertThat(outputIndexStrings, containsInAnyOrder("{{b}{a}}"));
     }
 
-    private List<Index> parseInputStrings(String[] inputIndexStrings) {
-        return Arrays.stream(inputIndexStrings)
-                .map(Index::parseIndex)
+    @Test
+    @DisplayName("optimization with empty field set 2")
+    public void testWithSmallestIndexSetStrategyWithoutMemoization6() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{b}{a}{}}",
+                "{{}{a,b}{}}"
+        });
+
+        // Act
+        List<Index> optimizedIndexes = createOptimizer().optimizeIndexes(indexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
                 .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(1));
+        assertThat(outputIndexStrings, containsInAnyOrder("{{b}{a}}"));
     }
 
     private IndexOptimizer createOptimizer() {
         IndexOptimizer indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
         indexOptimizer.setMemoize(false);
         return indexOptimizer;
+    }
+
+    private List<Index> parseInputStrings(String[] inputIndexStrings) {
+        return Arrays.stream(inputIndexStrings)
+                .map(Index::parseIndex)
+                .collect(Collectors.toList());
+    }
+
+    @Disabled
+    @Test
+    public void compareTimesWithAndWithoutMemoization() {
+
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer;
+        long t1, t2;
+
+        indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
+        indexOptimizer.setMemoize(false);
+        t1 = System.currentTimeMillis();
+        for (int i = 0; i < 1000; i++) {
+            indexOptimizer.optimizeIndexes(indexes);
+        }
+        t2 = System.currentTimeMillis();
+        System.out.println("Execution time (without memoization): " + (t2 - t1));
+
+        indexOptimizer = new IndexOptimizer(new SmallestIndexListSelectionStrategy());
+        indexOptimizer.setMemoize(true);
+        t1 = System.currentTimeMillis();
+        for (int i = 0; i < 1000; i++) {
+            indexOptimizer.optimizeIndexes(indexes);
+        }
+        t2 = System.currentTimeMillis();
+        System.out.println("Execution time (with memoization):    " + (t2 - t1));
+
+
+
+    }
+
+    @Test
+    public void testWithLargestIndexSetStrategy() {
+
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = new IndexOptimizer(new LargestIndexListSelectionStrategy());
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+
+        // Assert
+        for (Index optimizedIndex : optimizedIndexes) {
+            System.out.println(optimizedIndex.toStringSorted());
+        }
+
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(is -> is.toStringSorted())
+                .collect(Collectors.toList());
+        Assertions.assertEquals(5, outputIndexStrings.size());
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,d,f,g,j,n,r,t,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{d,g,r}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}}"));
     }
 
 }
