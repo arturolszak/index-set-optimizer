@@ -11,13 +11,15 @@ public class Index {
         fieldSets = new ArrayList<>();
     }
 
-    public Index(List<IndexField> fields) {
+    public Index(List<IndexFieldSet> fieldSets) {
         this();
-        IndexFieldSet fieldSet = new IndexFieldSet();
-        for (IndexField field : fields) {
-            fieldSet.add(field);
+        for (IndexFieldSet fieldSet : fieldSets) {
+            IndexFieldSet fieldSetCopy = new IndexFieldSet();
+            for (IndexField field : fieldSet.getFields()) {
+                fieldSetCopy.add(new IndexField(field.getName()));
+            }
+            this.fieldSets.add(fieldSetCopy);
         }
-        fieldSets.add(fieldSet);
     }
 
     public List<IndexFieldSet> getFieldSets() {

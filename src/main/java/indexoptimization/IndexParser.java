@@ -12,7 +12,9 @@ public class IndexParser {
             String fieldSetSubstring = s.substring(i, s.indexOf('}', i));
             String[] fields = fieldSetSubstring.split(",");
             for (String field : fields) {
-                fieldSet.add(new IndexField(field));
+                if (!field.isBlank()) {
+                    fieldSet.add(new IndexField(field));
+                }
             }
             i += fieldSetSubstring.length();
             i += accept(s, i, '}');

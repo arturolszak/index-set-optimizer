@@ -5,13 +5,18 @@ import org.apache.commons.lang3.tuple.Pair;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class IndexOptimizer {
 
     public static final boolean SHOULD_CONSIDER_SKIPPED_OPTIMIZATIONS = true;
+
+    public static final boolean REMOVE_DUPLICATE_FIELDS = false;
+
     private boolean memoize = true;
     private final IndexListSelectionStrategy indexListSelectionStrategy;
     private final HashMap<String, List<Index>> optimizedIndexesMemoizer = new HashMap<>();
@@ -26,11 +31,46 @@ public class IndexOptimizer {
     }
 
     public List<Index> optimizeIndexes(List<Index> indexes) {
+        indexes = sanitizeIndexes(indexes);
         List<Index> indexesSorted = indexes.stream()
             .sorted(Comparator.comparing(ind -> ((Index)ind).getLength()).reversed())
             .collect(Collectors.toList());
 
         return optimizeSortedIndexes(indexesSorted);
+    }
+
+    private List<Index> sanitizeIndexes(List<Index> indexes) {
+        return indexes.stream()
+            .map(index -> REMOVE_DUPLICATE_FIELDS ? removeDuplicateFields(index) : index)
+            .map(IndexOptimizer::removeEmptyFieldSets)
+            .collect(Collectors.toList());
+
+    }
+
+    private static Index removeDuplicateFields(Index index) {
+        Index newIndex = new Index(index.fieldSets);
+        Set<IndexField> fieldsSeenSoFar = new HashSet<>();
+        for (IndexFieldSet fieldSet : newIndex.fieldSets) {
+            Set<IndexField> dupsToRemove = new HashSet<>();
+            for (IndexField field : fieldSet.getFields()) {
+                if (fieldsSeenSoFar.contains(field)) {
+                    dupsToRemove.add(field);
+                } else {
+                    fieldsSeenSoFar.add(field);
+                }
+            }
+            for (IndexField dup : dupsToRemove) {
+                fieldSet.remove(dup);
+            }
+        }
+        return newIndex;
+    }
+
+    private static Index removeEmptyFieldSets(Index index) {
+        List<IndexFieldSet> newFieldSets = index.fieldSets.stream()
+            .filter(fieldSet -> fieldSet.getLength() > 0)
+            .collect(Collectors.toCollection(() -> new ArrayList<>()));
+        return new Index(newFieldSets);
     }
 
     private List<Index> optimizeSortedIndexes(List<Index> indexes) {

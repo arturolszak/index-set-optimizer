@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.contains;
 
@@ -247,6 +248,26 @@ class IndexOptimizerTest {
                 .collect(Collectors.toList());
         assertThat(outputIndexStrings, hasSize(1));
         assertThat(outputIndexStrings, contains("{{a,b}}"));
+    }
+
+    @Test
+    @DisplayName("optimization with empty field set")
+    public void testWithSmallestIndexSetStrategyWithoutMemoization5() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{}{a,b}}",
+                "{{b}{a}}"
+        });
+
+        // Act
+        List<Index> optimizedIndexes = createOptimizer().optimizeIndexes(indexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(1));
+        assertThat(outputIndexStrings, containsInAnyOrder("{{b}{a}}"));
     }
 
     private List<Index> parseInputStrings(String[] inputIndexStrings) {
