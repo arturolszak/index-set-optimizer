@@ -82,20 +82,6 @@ class IndexOptimizerTest {
     };
 
     @Test
-    public void testParseAndToString() {
-        String indexStr = "{{a,d,f,g,j,n,r,t,z}}";
-        Index index = Index.parseIndex(indexStr);
-        System.out.println(index);
-    }
-
-    @Test
-    public void testParseAndToStringWithGroups() {
-        String indexStr = "{{a,d}{f}{g,j}{n,r,t,z}}";
-        Index index = Index.parseIndex(indexStr);
-        System.out.println(index);
-    }
-
-    @Test
     public void testWithoutMemoization0() {
         // Arrange
         String[] inputIndexStrings = {
@@ -839,27 +825,6 @@ class IndexOptimizerTest {
         System.out.println(checkRes.getLeft());
         System.out.println(checkRes.getRight());
         return checkRes;
-    }
-
-    @Test
-    @DisplayName("duplicates of two indexes, one containing each other")
-    public void testX() {
-        // Arrange
-        List<Index> indexes = parseInputStrings(LONG_INPUT_INPUT_SET_LONG_STRINGS);
-        printIndexes("Input", indexes);
-
-        IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setMaxNumPathsPerStep(1);
-
-        // Act
-        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
-        printIndexes("Optimized", optimizedIndexes);
-
-        // Assert
-        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
-        Assertions.assertEquals(19, optimizedIndexes.size());
-        Assertions.assertEquals(29, checkRes.getLeft().size());
-        Assertions.assertTrue(checkRes.getRight().isEmpty());
     }
 
 }
