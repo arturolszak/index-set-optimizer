@@ -38,17 +38,15 @@ public class IndexFieldSet {
     }
 
     public String toString() {
-        String sb = "{" +
+        return "{" +
                 fields.stream().map(IndexField::toString).collect(Collectors.joining(",")) +
                 "}";
-        return sb;
     }
 
     public String toStringSorted() {
-        String sb = "{" +
+        return "{" +
                 fields.stream().map(IndexField::toString).sorted().collect(Collectors.joining(",")) +
                 "}";
-        return sb;
     }
 
     @Override
