@@ -107,7 +107,7 @@ public class IndexOptimizer {
         );
         this.maxNumPathsPerStep = -1;
 
-        this.optimizedIndexesMemoizer = initializeMemoizer();
+        this.optimizedIndexesMemoizer = (numThreads == 1 ? new HashMap<>() : new ConcurrentHashMap<>());
     }
 
     public static IndexOptimizer createDefaultSingleThreadedOptimizer() {
@@ -133,10 +133,6 @@ public class IndexOptimizer {
         return indexOptimizer;
     }
 
-    private Map<String, List<Index>> initializeMemoizer() {
-        return (numThreads == 1 ? new HashMap<>() : new ConcurrentHashMap<>());
-    }
-
     public List<Index> optimizeIndexes(List<Index> indexes) {
         indexes = sanitizeIndexes(indexes);
         Map<String, String> mapping = new HashMap<>();
@@ -146,13 +142,9 @@ public class IndexOptimizer {
         }
         List<Pair<Index, Index>> containedContainingIndexPairs = calculateContainedContainingIndexPairs(indexes);
         if (!containedContainingIndexPairs.isEmpty()) {
-            List<Index> optimized = optimizeIndexes(indexes, containedContainingIndexPairs);
-            optimized = mapIndexes(optimized, reverseMapping(mapping));
-            return optimized;
-        } else {
-            indexes = mapIndexes(indexes, reverseMapping(mapping));
-            return indexes;
+            indexes = optimizeIndexes(indexes, containedContainingIndexPairs);
         }
+        return mapIndexes(indexes, reverseMapping(mapping));
     }
 
     private List<Index> optimizeIndexes(List<Index> indexes, List<Pair<Index, Index>> containedContainingIndexPairs) {
@@ -175,8 +167,8 @@ public class IndexOptimizer {
                         () -> optimizeIndexesRecursive(indexes,
                                                        containedContainingIndexPairsSync,
                                                        ccRangeLow,
-                                                       ccRangeHigh,
-                                                       0)
+                                                       ccRangeHigh
+                        )
                 );
                 futures.add(future);
             }
@@ -189,13 +181,13 @@ public class IndexOptimizer {
                 }
             }
             optimizedSublists.add(indexes);
-            optimized = choseBestIndexes(optimizedSublists);
+            optimized = indexListSelectionStrategy.choseBestIndexSet(optimizedSublists);
         } else {
             optimized = optimizeIndexesRecursive(indexes,
                                                  containedContainingIndexPairs,
                                                  0,
-                                                 containedContainingIndexPairs.size(),
-                                                 0);
+                                                 containedContainingIndexPairs.size()
+            );
         }
         return optimized;
     }
@@ -282,8 +274,7 @@ public class IndexOptimizer {
     private List<Index> optimizeIndexesRecursive(List<Index> indexes,
                                                  List<Pair<Index, Index>> containedContainingIndexPairs,
                                                  int from,
-                                                 int to,
-                                                 int level) {
+                                                 int to) {
         // sorted index list and sorted fields within field sets, so the key string is always the same for memoization
         String s = indexes.stream().map(Index::toStringSorted).sorted().collect(Collectors.joining(", "));
         if (memoize) {
@@ -293,15 +284,14 @@ public class IndexOptimizer {
             }
         }
 
-        List<List<Index>> newIndexListCandidates = doOptimizeIndexesRecursive(indexes,
-                                                                              containedContainingIndexPairs,
-                                                                              from,
-                                                                              to,
-                                                                              level);
+        List<List<Index>> newIndexListCandidates = mergeContainedContainingPairsRecursive(indexes,
+                                                                                          containedContainingIndexPairs,
+                                                                                          from,
+                                                                                          to);
 
         //chose the best according to the chosen strategy, and return it
         newIndexListCandidates.add(indexes);
-        List<Index> optimizedIndexes = choseBestIndexes(newIndexListCandidates);
+        List<Index> optimizedIndexes = indexListSelectionStrategy.choseBestIndexSet(newIndexListCandidates);
 
         if (memoize) {
             optimizedIndexesMemoizer.put(s, optimizedIndexes);
@@ -309,11 +299,10 @@ public class IndexOptimizer {
         return optimizedIndexes;
     }
 
-    private List<List<Index>> doOptimizeIndexesRecursive(List<Index> indexes,
-                                                         List<Pair<Index, Index>> containedContainingIndexPairs,
-                                                         int from,
-                                                         int to,
-                                                         int level) {
+    private List<List<Index>> mergeContainedContainingPairsRecursive(List<Index> indexes,
+                                                                     List<Pair<Index, Index>> containedContainingIndexPairs,
+                                                                     int from,
+                                                                     int to) {
         List<List<Index>> newIndexListCandidates = new ArrayList<>();
 
         sortContainedContainingIndexPair(containedContainingIndexPairs, from, to);
@@ -338,8 +327,8 @@ public class IndexOptimizer {
                 List<Index> indexesAfterRecursiveRemoval = optimizeIndexesRecursive(indexesAfterRemovingOneAndConstraining,
                                                                                     remainingCcPairs,
                                                                                     0,
-                                                                                    remainingCcPairs.size(),
-                                                                                    level + 1);
+                                                                                    remainingCcPairs.size()
+                );
                 newIndexListCandidates.add(indexesAfterRecursiveRemoval);
             } else {
                 newIndexListCandidates.add(indexesAfterRemovingOneAndConstraining);
@@ -372,7 +361,6 @@ public class IndexOptimizer {
         for (Index index : indexes) {
             if (index != contained) {
                 newList.add(index);
-
             } // else skip (remove)
         }
         return newList;
@@ -426,22 +414,6 @@ public class IndexOptimizer {
             remainingCcPairs.add(pair);
         }
         return remainingCcPairs;
-    }
-
-    private static List<Pair<Index, Index>> getRemainingCcPairsForSkippingOptimization(List<Pair<Index, Index>> containedContainingIndexPairs,
-                                                                                       int indexOfRemoved) {
-        List<Pair<Index, Index>> remainingCcPairs = new ArrayList<>();
-        for (int i = 0; i < containedContainingIndexPairs.size(); i++) {
-            if (i == indexOfRemoved) {
-                continue;
-            }
-            remainingCcPairs.add(containedContainingIndexPairs.get(i));
-        }
-        return remainingCcPairs;
-    }
-
-    private List<Index> choseBestIndexes(List<List<Index>> newIndexListCandidates) {
-        return indexListSelectionStrategy.choseBestIndexSet(newIndexListCandidates);
     }
 
     private static List<Pair<Index, Index>> calculateContainedContainingIndexPairs(List<Index> indexes) {
@@ -543,9 +515,6 @@ public class IndexOptimizer {
 
     @VisibleForTesting void setIndexListSelectionStrategy(IndexListSelectionStrategy indexListSelectionStrategy) {
         this.indexListSelectionStrategy = indexListSelectionStrategy;
-    }
-
-    @VisibleForTesting void setShouldConsiderSkippedOptimizations(boolean shouldConsiderSkippedOptimizations) {
     }
 
     @VisibleForTesting void setMaxNumPathsPerStep(int maxNumPathsPerStep) {

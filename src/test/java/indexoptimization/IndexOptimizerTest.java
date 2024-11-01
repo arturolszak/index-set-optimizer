@@ -587,6 +587,114 @@ class IndexOptimizerTest {
     }
 
     @Test
+    public void test_withSinglethreadedOptimizer_allPaths() {
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(3, outputIndexStrings.size());
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+    }
+
+    @Test
+    public void test_withSinglethreadedOptimizer_limitedPaths() {
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastSingleThreadedOptimizer();
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(3, outputIndexStrings.size());
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+    }
+
+    @Test
+    public void test_withMultithreadedOptimizer_allPaths() {
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultMultiThreadedOptimizer();
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(3, outputIndexStrings.size());
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+    }
+
+    @Test
+    public void test_withMultithreadedOptimizer_limitedPaths() {
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer();
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(3, outputIndexStrings.size());
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+    }
+
+    @Test
     public void testWithLargestIndexSetSelectionStrategy_03() {
         // Arrange
         String[] inputIndexStrings = {
@@ -731,6 +839,27 @@ class IndexOptimizerTest {
         System.out.println(checkRes.getLeft());
         System.out.println(checkRes.getRight());
         return checkRes;
+    }
+
+    @Test
+    @DisplayName("duplicates of two indexes, one containing each other")
+    public void testX() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(LONG_INPUT_INPUT_SET_LONG_STRINGS);
+        printIndexes("Input", indexes);
+
+        IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
+        indexOptimizer.setMaxNumPathsPerStep(1);
+
+        // Act
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
+        Assertions.assertEquals(19, optimizedIndexes.size());
+        Assertions.assertEquals(29, checkRes.getLeft().size());
+        Assertions.assertTrue(checkRes.getRight().isEmpty());
     }
 
 }
