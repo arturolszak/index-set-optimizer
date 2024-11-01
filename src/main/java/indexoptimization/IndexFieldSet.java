@@ -1,6 +1,7 @@
 package indexoptimization;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,7 +23,7 @@ public class IndexFieldSet {
     }
 
     public Set<IndexField> getFields() {
-        return new HashSet<>(fields);
+        return new LinkedHashSet<>(fields);
     }
 
     void add(IndexField field) {
