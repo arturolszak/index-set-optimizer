@@ -450,25 +450,18 @@ class IndexOptimizerTest {
     }
 
     @Test
-    @DisplayName("optimal solution requires not covered with first contained-containing pair")
+    @DisplayName("duplicates of two indexes, one containing each other")
     public void test2() {
         // Arrange
         List<Index> indexes = parseInputStrings(new String[]{
-                "{{1,2}{3}{4}{5}{6}}",
-                "{{2}{1}{3}{4}{5}{6}}",
+                "{{1}{2}}",
                 "{{1}{2}}",
                 "{{1}{2}{3}}",
-                "{{1}{2}{3}{4}}",
-                "{{1}{2}{3}{4}{5}}",
-                "{{1}{2}{3}{4}{5}{6}}"
+                "{{1}{2}{3}}",
         });
-        System.out.println("Is contained: " + IndexOptimizer.isContained(Index.parseIndex("{{1}{2}{3}}{5}}"),
-                                                                         Index.parseIndex("{{2}{1}{3}{4}{5}{6}}")
-        ));
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-//        optimizer.setMaskKeyNames(false);
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -476,8 +469,8 @@ class IndexOptimizerTest {
         List<String> outputIndexStrings = optimizedIndexes.stream()
                 .map(Index::toStringSorted)
                 .collect(Collectors.toList());
-        assertThat(outputIndexStrings, hasSize(2));
-        assertThat(outputIndexStrings, containsInAnyOrder("{{2}{1}{3}{4}{5}{6}}", "{{1}{2}{3}{4}{5}{6}}"));
+        assertThat(outputIndexStrings, hasSize(1));
+        assertThat(outputIndexStrings, containsInAnyOrder("{{1}{2}{3}}"));
     }
 
     @Test

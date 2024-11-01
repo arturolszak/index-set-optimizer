@@ -396,7 +396,7 @@ public class IndexOptimizer {
     private List<Index> replaceContainingWithConstrained(Index containingIndex, Index constrainedContainingIndex, List<Index> indexes) {
         List<Index> newList = new ArrayList<>(indexes.size() - 1);
         for (Index index : indexes) {
-            if (index.equals(containingIndex)) {
+            if (index == containingIndex) {
                 newList.add(constrainedContainingIndex);
             } else {
                 newList.add(index);
@@ -417,13 +417,20 @@ public class IndexOptimizer {
             Index currContained = pair.getLeft();
 
             //remove all pairs that has the removed index in contained or containing
-            if (removed.equals(currContianing) || removed.equals(currContained)) {
+            if (removed == currContianing || removed == currContained) {
                 continue;
             }
 
-            if (currContianing == oldContaining) {
-                //as the containing has additional constraints now, we need to recheck whether it still contains the
-                // contained
+            if (currContained == oldContaining) {
+                //the contained has additional constraints now, recheck whether it is still contained in the containing
+                if (isContained(constrainedContainingIndex, currContianing)) {
+                    //replace old containing with the new constrained containing
+                    pair = Pair.of(constrainedContainingIndex, currContianing);
+                } else {
+                    continue;
+                }
+            } else if (currContianing == oldContaining) {
+                //the containing has additional constraints, recheck whether it still contains the contained
                 if (isContained(currContained, constrainedContainingIndex)) {
                     //replace old containing with the new constrained containing
                     pair = Pair.of(currContained, constrainedContainingIndex);
