@@ -96,7 +96,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        optimizer.setMemoize(false);
+        optimizer.memoize = false;
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -124,7 +124,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setMemoize(false);
+        indexOptimizer.memoize = false;
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -148,7 +148,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        optimizer.setMemoize(false);
+        optimizer.memoize = false;
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -171,7 +171,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        optimizer.setMemoize(false);
+        optimizer.memoize = false;
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
 
         // Assert
@@ -193,7 +193,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        optimizer.setMemoize(false);
+        optimizer.memoize = false;
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
 
         // Assert
@@ -215,7 +215,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        optimizer.setMemoize(false);
+        optimizer.memoize = false;
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -238,7 +238,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        optimizer.setMemoize(false);
+        optimizer.memoize = false;
         List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -472,8 +472,8 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setMemoize(true);
-        indexOptimizer.setIndexListSelectionStrategy(new SmallestIndexListSelectionStrategy());
+        indexOptimizer.memoize = true;
+        indexOptimizer.indexListSelectionStrategy = new SmallestIndexListSelectionStrategy();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -500,9 +500,9 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setMemoize(false);
-        indexOptimizer.setMaskKeyNames(false);
-        indexOptimizer.setIndexListSelectionStrategy(new SmallestIndexListSelectionStrategy());
+        indexOptimizer.memoize = false;
+        indexOptimizer.maskKeyNames = false;
+        indexOptimizer.indexListSelectionStrategy = new SmallestIndexListSelectionStrategy();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -530,7 +530,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setIndexListSelectionStrategy(new SmallestIndexListSelectionStrategy());
+        indexOptimizer.indexListSelectionStrategy = new SmallestIndexListSelectionStrategy();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -558,7 +558,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setIndexListSelectionStrategy(new MinSumOfSquaresIndexListSelectionStrategy());
+        indexOptimizer.indexListSelectionStrategy = new MinSumOfSquaresIndexListSelectionStrategy();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -600,6 +600,35 @@ class IndexOptimizerTest {
     }
 
     @Test
+    public void test_withSinglethreadedOptimizer_onePath() {
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastSingleThreadedOptimizer();
+        indexOptimizer.maxNumPathsPerStep = 1;
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(3, outputIndexStrings.size());
+        // the output is different for limited paths explored:
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}{d,f,g,j,n,r,t}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+    }
+
+    @Test
     public void test_withSinglethreadedOptimizer_limitedPaths() {
         // Arrange
         String[] inputIndexStrings = {
@@ -621,6 +650,7 @@ class IndexOptimizerTest {
                 .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
+        // the output is different for limited paths explored:
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
@@ -639,7 +669,8 @@ class IndexOptimizerTest {
         List<Index> indexes = parseInputStrings(inputIndexStrings);
 
         // Act
-        IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultMultiThreadedOptimizer();
+        IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultMultiThreadedOptimizer(Runtime.getRuntime()
+                                                                                                   .availableProcessors());
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -650,6 +681,36 @@ class IndexOptimizerTest {
         Assertions.assertEquals(3, outputIndexStrings.size());
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
+    }
+
+    @Test
+    public void test_withMultithreadedOptimizer_onePath() {
+        // Arrange
+        String[] inputIndexStrings = {
+                "{{a,d,f,g,j,n,r,t,z}}",
+                "{{d,g,r}}",
+                "{{a,z}}",
+                "{{b,r}}",
+                "{{g}}"
+        };
+        List<Index> indexes = parseInputStrings(inputIndexStrings);
+
+        // Act
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer(Runtime.getRuntime()
+                                                                                                .availableProcessors());
+        indexOptimizer.maxNumPathsPerStep = 1;
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(3, outputIndexStrings.size());
+        // the output is different for limited recursion paths being explored
+        Assertions.assertTrue(outputIndexStrings.contains("{{a,z}{d,f,g,j,n,r,t}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
     }
 
@@ -666,7 +727,8 @@ class IndexOptimizerTest {
         List<Index> indexes = parseInputStrings(inputIndexStrings);
 
         // Act
-        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer();
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer(Runtime.getRuntime()
+                                                                                                .availableProcessors());
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -675,6 +737,7 @@ class IndexOptimizerTest {
                 .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
+        // the output is different for limited recursion paths being explored
         Assertions.assertTrue(outputIndexStrings.contains("{{g}{d,r}{a,f,j,n,t,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{a,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{b,r}}"));
@@ -694,7 +757,7 @@ class IndexOptimizerTest {
 
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setIndexListSelectionStrategy(new LargestIndexListSelectionStrategy());
+        indexOptimizer.indexListSelectionStrategy = new LargestIndexListSelectionStrategy();
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -728,7 +791,7 @@ class IndexOptimizerTest {
         long t1, t2;
 
         indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setMemoize(false);
+        indexOptimizer.memoize = false;
         t1 = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
             indexOptimizer.optimizeIndexes(indexes);
@@ -737,13 +800,34 @@ class IndexOptimizerTest {
         System.out.println("Execution time (without memoization): " + (t2 - t1));
 
         indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
-        indexOptimizer.setMemoize(true);
+        indexOptimizer.memoize = true;
         t1 = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++) {
             indexOptimizer.optimizeIndexes(indexes);
         }
         t2 = System.currentTimeMillis();
         System.out.println("Execution time (with memoization):    " + (t2 - t1));
+    }
+
+    @Test
+    public void test_large_with_short_index_names_01_one_path_per_step() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(LONG_INPUT_INDEX_SET_STRINGS);
+        printIndexes("Input", indexes);
+
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastSingleThreadedOptimizer();
+        indexOptimizer.maxNumPathsPerStep = 1;
+
+        // Act
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
+        Assertions.assertEquals(19, optimizedIndexes.size());
+        Assertions.assertEquals(29, checkRes.getLeft().size());
+        Assertions.assertEquals(87, optimizedIndexes.stream().mapToInt(Index::getLength).sum());
+        Assertions.assertTrue(checkRes.getRight().isEmpty());
     }
 
     @Test
@@ -762,16 +846,19 @@ class IndexOptimizerTest {
         Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
         Assertions.assertEquals(19, optimizedIndexes.size());
         Assertions.assertEquals(29, checkRes.getLeft().size());
+        Assertions.assertEquals(82, optimizedIndexes.stream().mapToInt(Index::getLength).sum());
         Assertions.assertTrue(checkRes.getRight().isEmpty());
     }
 
     @Test
-    public void test_large_with_short_index_names_02_multithreaded_and_limited_paths_per_step() {
+    public void test_large_with_short_index_names_02_multithreaded_and_one_path_per_step() {
         // Arrange
         List<Index> indexes = parseInputStrings(LONG_INPUT_INDEX_SET_STRINGS);
         printIndexes("Input", indexes);
 
-        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer();
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer(Runtime.getRuntime()
+                                                                                                .availableProcessors());
+        indexOptimizer.maxNumPathsPerStep = 1;
 
         // Act
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
@@ -781,6 +868,28 @@ class IndexOptimizerTest {
         Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
         Assertions.assertEquals(19, optimizedIndexes.size());
         Assertions.assertEquals(29, checkRes.getLeft().size());
+        Assertions.assertEquals(87, optimizedIndexes.stream().mapToInt(Index::getLength).sum());
+        Assertions.assertTrue(checkRes.getRight().isEmpty());
+    }
+
+    @Test
+    public void test_large_with_short_index_names_03_multithreaded_and_limited_paths_per_step() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(LONG_INPUT_INDEX_SET_STRINGS);
+        printIndexes("Input", indexes);
+
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer(Runtime.getRuntime()
+                                                                                                .availableProcessors());
+
+        // Act
+        List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
+        Assertions.assertEquals(19, optimizedIndexes.size());
+        Assertions.assertEquals(29, checkRes.getLeft().size());
+        Assertions.assertEquals(82, optimizedIndexes.stream().mapToInt(Index::getLength).sum());
         Assertions.assertTrue(checkRes.getRight().isEmpty());
     }
 
@@ -790,7 +899,8 @@ class IndexOptimizerTest {
         List<Index> indexes = parseInputStrings(LONG_INPUT_INPUT_SET_LONG_STRINGS);
         printIndexes("Input", indexes);
 
-        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer();
+        IndexOptimizer indexOptimizer = IndexOptimizer.createFastMultiThreadedOptimizer(Runtime.getRuntime()
+                                                                                                .availableProcessors());
 
         // Act
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
@@ -800,6 +910,7 @@ class IndexOptimizerTest {
         Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
         Assertions.assertEquals(19, optimizedIndexes.size());
         Assertions.assertEquals(29, checkRes.getLeft().size());
+        Assertions.assertEquals(82, optimizedIndexes.stream().mapToInt(Index::getLength).sum());
         Assertions.assertTrue(checkRes.getRight().isEmpty());
     }
 

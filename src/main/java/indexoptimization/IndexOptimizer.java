@@ -86,14 +86,14 @@ public class IndexOptimizer {
 
     // compile-time config:
     private static final boolean removeDuplicateFields = false;
-    public static final int FAST_OPTIMIZER_MAX_NUM_PATHS_PER_STEP = 5;
+    public static final int FAST_OPTIMIZER_MAX_NUM_PATHS_PER_STEP = 3;
 
     // runtime config:
-    private boolean maskKeyNames;
-    private boolean memoize;
-    private int numThreads;
-    private IndexListSelectionStrategy indexListSelectionStrategy;
-    private int maxNumPathsPerStep;
+    @VisibleForTesting boolean maskKeyNames;
+    @VisibleForTesting boolean memoize;
+    @VisibleForTesting int numThreads;
+    @VisibleForTesting IndexListSelectionStrategy indexListSelectionStrategy;
+    @VisibleForTesting int maxNumPathsPerStep;
 
     private final Map<String, List<Index>> optimizedIndexesMemoizer;
 
@@ -102,12 +102,9 @@ public class IndexOptimizer {
         this.memoize = true;
         this.numThreads = 1;
         this.indexListSelectionStrategy = new ChainingIndexListSelectionStrategy(
-                new SmallestIndexListSelectionStrategy(),
-                new MinSumOfSquaresIndexListSelectionStrategy()
-        );
+                new SmallestIndexListSelectionStrategy(), new MinSumOfSquaresIndexListSelectionStrategy());
         this.maxNumPathsPerStep = -1;
-
-        this.optimizedIndexesMemoizer = (numThreads == 1 ? new HashMap<>() : new ConcurrentHashMap<>());
+        this.optimizedIndexesMemoizer = new ConcurrentHashMap<>();
     }
 
     public static IndexOptimizer createDefaultSingleThreadedOptimizer() {
@@ -116,20 +113,20 @@ public class IndexOptimizer {
 
     public static IndexOptimizer createFastSingleThreadedOptimizer() {
         IndexOptimizer indexOptimizer = new IndexOptimizer();
-        indexOptimizer.setMaxNumPathsPerStep(FAST_OPTIMIZER_MAX_NUM_PATHS_PER_STEP);
+        indexOptimizer.maxNumPathsPerStep = FAST_OPTIMIZER_MAX_NUM_PATHS_PER_STEP;
         return indexOptimizer;
     }
 
-    public static IndexOptimizer createDefaultMultiThreadedOptimizer() {
+    public static IndexOptimizer createDefaultMultiThreadedOptimizer(int numThreads) {
         IndexOptimizer indexOptimizer = new IndexOptimizer();
-        indexOptimizer.setNumThreads(Runtime.getRuntime().availableProcessors());
+        indexOptimizer.numThreads = numThreads;
         return indexOptimizer;
     }
 
-    public static IndexOptimizer createFastMultiThreadedOptimizer() {
+    public static IndexOptimizer createFastMultiThreadedOptimizer(int numThreads) {
         IndexOptimizer indexOptimizer = new IndexOptimizer();
-        indexOptimizer.setMaxNumPathsPerStep(FAST_OPTIMIZER_MAX_NUM_PATHS_PER_STEP);
-        indexOptimizer.setNumThreads(Runtime.getRuntime().availableProcessors());
+        indexOptimizer.maxNumPathsPerStep = FAST_OPTIMIZER_MAX_NUM_PATHS_PER_STEP;
+        indexOptimizer.numThreads = numThreads;
         return indexOptimizer;
     }
 
@@ -161,14 +158,9 @@ public class IndexOptimizer {
                     : containedContainingIndexPairs.size();
 
             for (int i = 0; i < to; i++) {
-                int ccRangeLow = i;
-                int ccRangeHigh = i + 1;
+                int ii = i; // has to be effectively final
                 Future<List<Index>> future = executorService.submit(
-                        () -> optimizeIndexesRecursive(indexes,
-                                                       containedContainingIndexPairsSync,
-                                                       ccRangeLow,
-                                                       ccRangeHigh
-                        )
+                        () -> optimizeIndexesRecursive(indexes, containedContainingIndexPairsSync, ii,ii + 1)
                 );
                 futures.add(future);
             }
@@ -183,11 +175,8 @@ public class IndexOptimizer {
             optimizedSublists.add(indexes);
             optimized = indexListSelectionStrategy.choseBestIndexSet(optimizedSublists);
         } else {
-            optimized = optimizeIndexesRecursive(indexes,
-                                                 containedContainingIndexPairs,
-                                                 0,
-                                                 containedContainingIndexPairs.size()
-            );
+            optimized =
+                    optimizeIndexesRecursive(indexes,containedContainingIndexPairs,0, containedContainingIndexPairs.size());
         }
         return optimized;
     }
@@ -242,7 +231,6 @@ public class IndexOptimizer {
                 .map(IndexOptimizer::removeEmptyFieldSets)
                 .filter(index -> !index.fieldSets.isEmpty())
                 .collect(Collectors.toList());
-
     }
 
     private static Index removeDuplicateFields(Index index) {
@@ -284,10 +272,8 @@ public class IndexOptimizer {
             }
         }
 
-        List<List<Index>> newIndexListCandidates = mergeContainedContainingPairsRecursive(indexes,
-                                                                                          containedContainingIndexPairs,
-                                                                                          from,
-                                                                                          to);
+        List<List<Index>> newIndexListCandidates =
+                mergeContainedContainingPairsRecursive(indexes, containedContainingIndexPairs, from, to);
 
         //chose the best according to the chosen strategy, and return it
         newIndexListCandidates.add(indexes);
@@ -296,6 +282,7 @@ public class IndexOptimizer {
         if (memoize) {
             optimizedIndexesMemoizer.put(s, optimizedIndexes);
         }
+
         return optimizedIndexes;
     }
 
@@ -304,7 +291,6 @@ public class IndexOptimizer {
                                                                      int from,
                                                                      int to) {
         List<List<Index>> newIndexListCandidates = new ArrayList<>();
-
         sortContainedContainingIndexPair(containedContainingIndexPairs, from, to);
         to = maxNumPathsPerStep >= 0 ? Math.min(to, from + maxNumPathsPerStep) : to;
 
@@ -316,10 +302,8 @@ public class IndexOptimizer {
 
             List<Index> indexesAfterRemovingOne = removeIndex(containedIndex, indexes);
             Index constrainedContainingIndex = mergeIndexPair(containedIndex, containingIndex);
-            List<Index> indexesAfterRemovingOneAndConstraining = replaceContainingWithConstrained(
-                    containingIndex,
-                    constrainedContainingIndex,
-                    indexesAfterRemovingOne);
+            List<Index> indexesAfterRemovingOneAndConstraining =
+                    replaceContainingWithConstrained(containingIndex, constrainedContainingIndex, indexesAfterRemovingOne);
             List<Pair<Index, Index>> remainingCcPairs = getRemainingCcPairs(containedContainingIndexPairs,
                                                                             i,
                                                                             constrainedContainingIndex);
@@ -330,10 +314,9 @@ public class IndexOptimizer {
                                                                                     remainingCcPairs.size()
                 );
                 newIndexListCandidates.add(indexesAfterRecursiveRemoval);
-            } else {
+            } else { // recursion bottoms up
                 newIndexListCandidates.add(indexesAfterRemovingOneAndConstraining);
             }
-
         }
 
         return newIndexListCandidates;
@@ -348,7 +331,6 @@ public class IndexOptimizer {
             Integer containedCount = containedCounts.getOrDefault(containing, 0);
             containedCounts.put(containing, containedCount + 1);
         }
-
         containedContainingIndexPairs.subList(from, to).sort(Comparator
                                                                      .comparing(p -> containedCounts.get(((Pair<Index, Index>) p).getRight().toStringSorted()))
                                                                      .thenComparing(p -> -((Pair<Index, Index>) p).getRight().getLength())
@@ -388,12 +370,10 @@ public class IndexOptimizer {
         for (Pair<Index, Index> pair : containedContainingIndexPairs) {
             Index currContianing = pair.getRight();
             Index currContained = pair.getLeft();
-
             //remove all pairs that has the removed index in contained or containing
             if (removed == currContianing || removed == currContained) {
                 continue;
             }
-
             if (currContained == oldContaining) {
                 //the contained has additional constraints now, recheck whether it is still contained in the containing
                 if (isContained(constrainedContainingIndex, currContianing)) {
@@ -496,29 +476,6 @@ public class IndexOptimizer {
         }
 
         return constrainedIndex;
-    }
-
-
-    // setters to configure the behavior of the index optimizer, used for testing
-
-    @VisibleForTesting void setMaskKeyNames(boolean maskKeyNames) {
-        this.maskKeyNames = maskKeyNames;
-    }
-
-    @VisibleForTesting void setMemoize(boolean memoize) {
-        this.memoize = memoize;
-    }
-
-    @VisibleForTesting void setNumThreads(int numThreads) {
-        this.numThreads = numThreads;
-    }
-
-    @VisibleForTesting void setIndexListSelectionStrategy(IndexListSelectionStrategy indexListSelectionStrategy) {
-        this.indexListSelectionStrategy = indexListSelectionStrategy;
-    }
-
-    @VisibleForTesting void setMaxNumPathsPerStep(int maxNumPathsPerStep) {
-        this.maxNumPathsPerStep = maxNumPathsPerStep;
     }
 
 }
