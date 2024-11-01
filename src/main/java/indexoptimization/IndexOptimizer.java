@@ -93,7 +93,6 @@ public class IndexOptimizer {
     private boolean memoize;
     private int numThreads;
     private IndexListSelectionStrategy indexListSelectionStrategy;
-    private boolean shouldConsiderSkippedOptimizations;
     private int maxNumPathsPerStep;
 
     private final Map<String, List<Index>> optimizedIndexesMemoizer;
@@ -106,7 +105,6 @@ public class IndexOptimizer {
                 new SmallestIndexListSelectionStrategy(),
                 new MinSumOfSquaresIndexListSelectionStrategy()
         );
-        this.shouldConsiderSkippedOptimizations = false;
         this.maxNumPathsPerStep = -1;
 
         this.optimizedIndexesMemoizer = initializeMemoizer();
@@ -190,6 +188,7 @@ public class IndexOptimizer {
                     throw new RuntimeException(e);
                 }
             }
+            optimizedSublists.add(indexes);
             optimized = choseBestIndexes(optimizedSublists);
         } else {
             optimized = optimizeIndexesRecursive(indexes,
@@ -301,6 +300,7 @@ public class IndexOptimizer {
                                                                               level);
 
         //chose the best according to the chosen strategy, and return it
+        newIndexListCandidates.add(indexes);
         List<Index> optimizedIndexes = choseBestIndexes(newIndexListCandidates);
 
         if (memoize) {
@@ -343,21 +343,6 @@ public class IndexOptimizer {
                 newIndexListCandidates.add(indexesAfterRecursiveRemoval);
             } else {
                 newIndexListCandidates.add(indexesAfterRemovingOneAndConstraining);
-            }
-
-            if (shouldConsiderSkippedOptimizations) {
-                List<Pair<Index, Index>> remainingCcPairsAfterSkipping = getRemainingCcPairsForSkippingOptimization(containedContainingIndexPairs, i);
-                if (! remainingCcPairsAfterSkipping.isEmpty()) {
-                    List<Index> indexesAfterRecursiveRemoval = optimizeIndexesRecursive(indexes,
-                                                                                        remainingCcPairsAfterSkipping,
-
-                                                                                        0,
-                                                                                        remainingCcPairsAfterSkipping.size(),
-                                                                                        level + 1);
-                    newIndexListCandidates.add(indexesAfterRecursiveRemoval);
-                } else {
-                    newIndexListCandidates.add(indexes);
-                }
             }
 
         }
@@ -561,7 +546,6 @@ public class IndexOptimizer {
     }
 
     @VisibleForTesting void setShouldConsiderSkippedOptimizations(boolean shouldConsiderSkippedOptimizations) {
-        this.shouldConsiderSkippedOptimizations = shouldConsiderSkippedOptimizations;
     }
 
     @VisibleForTesting void setMaxNumPathsPerStep(int maxNumPathsPerStep) {

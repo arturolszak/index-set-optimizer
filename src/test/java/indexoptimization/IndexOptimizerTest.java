@@ -474,7 +474,6 @@ class IndexOptimizerTest {
     }
 
     @Test
-    @Disabled
     public void testWithSmallestIndexSetStrategy() {
         // Arrange
         String[] inputIndexStrings = {
@@ -488,7 +487,6 @@ class IndexOptimizerTest {
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
         indexOptimizer.setMemoize(true);
-        indexOptimizer.setShouldConsiderSkippedOptimizations(true);
         indexOptimizer.setIndexListSelectionStrategy(new SmallestIndexListSelectionStrategy());
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
@@ -498,13 +496,12 @@ class IndexOptimizerTest {
                 .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
-        Assertions.assertTrue(outputIndexStrings.contains("{{x,y}{z}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{x,y}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{x,z}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{y,z}{x}}"));
     }
 
     @Test
-    @Disabled
     public void testWithSmallestIndexSetStrategy2() {
         // Arrange
         String[] inputIndexStrings = {
@@ -519,7 +516,6 @@ class IndexOptimizerTest {
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
         indexOptimizer.setMemoize(false);
         indexOptimizer.setMaskKeyNames(false);
-        indexOptimizer.setShouldConsiderSkippedOptimizations(true);
         indexOptimizer.setIndexListSelectionStrategy(new SmallestIndexListSelectionStrategy());
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
@@ -529,13 +525,12 @@ class IndexOptimizerTest {
                 .map(Index::toStringSorted)
                 .collect(Collectors.toList());
         Assertions.assertEquals(3, outputIndexStrings.size());
-        Assertions.assertTrue(outputIndexStrings.contains("{{0,1}{2}}"));
+        Assertions.assertTrue(outputIndexStrings.contains("{{0,1}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{0,2}}"));
         Assertions.assertTrue(outputIndexStrings.contains("{{1,2}{0}}"));
     }
 
     @Test
-    @Disabled
     public void testWithSmallestIndexSetSelectionStrategy_03() {
         // Arrange
         String[] inputIndexStrings = {
@@ -550,8 +545,6 @@ class IndexOptimizerTest {
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
         indexOptimizer.setIndexListSelectionStrategy(new SmallestIndexListSelectionStrategy());
-        // consider skipped cases, otherwise some suboptimal cases will not be taken into account
-        indexOptimizer.setShouldConsiderSkippedOptimizations(true);
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -580,8 +573,6 @@ class IndexOptimizerTest {
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
         indexOptimizer.setIndexListSelectionStrategy(new MinSumOfSquaresIndexListSelectionStrategy());
-        // consider skipped cases, otherwise some suboptimal cases will not be taken into account
-        indexOptimizer.setShouldConsiderSkippedOptimizations(true);
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
@@ -596,7 +587,6 @@ class IndexOptimizerTest {
     }
 
     @Test
-    @Disabled
     public void testWithLargestIndexSetSelectionStrategy_03() {
         // Arrange
         String[] inputIndexStrings = {
@@ -611,8 +601,6 @@ class IndexOptimizerTest {
         // Act
         IndexOptimizer indexOptimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
         indexOptimizer.setIndexListSelectionStrategy(new LargestIndexListSelectionStrategy());
-        // consider skipped cases, otherwise some suboptimal cases will not be taken into account
-        indexOptimizer.setShouldConsiderSkippedOptimizations(true);
         List<Index> optimizedIndexes = indexOptimizer.optimizeIndexes(indexes);
         printIndexes("Optimized", optimizedIndexes);
 
