@@ -9,14 +9,14 @@ import java.util.Map;
 
 public class IndexCoverageChecker {
 
-    public Pair<Map<Index, List<Index>>, List<Index>> checkIndexCoverage(List<Index> indexes,
-                                                                      List<Index> coveringIndexes) {
-        Map<Index, List<Index>> covered = new LinkedHashMap<>();
+    public Pair<List<Pair<Index, List<Index>>>, List<Index>> checkIndexCoverage(List<Index> indexes,
+                                                                                List<Index> coveringIndexes) {
+        List<Pair<Index, List<Index>>> covered = new ArrayList<>();
         List<Index> notCovered = new ArrayList<>();
         for (Index index : indexes) {
             List<Index> foundCoveringIndexes = checkIndexCoverage(index, coveringIndexes);
             if (!foundCoveringIndexes.isEmpty()) {
-                covered.put(index, foundCoveringIndexes);
+                covered.add(Pair.of(index, foundCoveringIndexes));
             } else {
                 notCovered.add(index);
             }

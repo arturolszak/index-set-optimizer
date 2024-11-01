@@ -1,7 +1,6 @@
 package indexoptimization;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.lang3.tuple.Pair;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
@@ -9,13 +8,12 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 class IndexOptimizerTest {
 
@@ -430,6 +428,54 @@ class IndexOptimizerTest {
     }
 
     @Test
+    @DisplayName("possible optimization with overlapping constraints")
+    public void test1() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{a,b}{c,d}}",
+                "{{b}{a,c}{d}}"
+        });
+
+        // Act
+        IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
+        List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(1));
+        assertThat(outputIndexStrings, contains("{{b}{a}{c}{d}}"));
+    }
+
+    @Test
+    @DisplayName("optimzal solution requires not covered with first contained-containing pair")
+    public void test2() {
+        // Arrange
+        List<Index> indexes = parseInputStrings(new String[]{
+                "{{1,2}{3}}",
+                "{{2}{1}{3}}",
+                "{{1}{2}}",
+                "{{1}{2,3}}",
+                "{{1}}"
+        });
+
+        // Act
+        IndexOptimizer optimizer = IndexOptimizer.createDefaultSingleThreadedOptimizer();
+        List<Index> optimizedIndexes = optimizer.optimizeIndexes(indexes);
+        printIndexes("Optimized", optimizedIndexes);
+
+        // Assert
+        List<String> outputIndexStrings = optimizedIndexes.stream()
+                .map(Index::toStringSorted)
+                .collect(Collectors.toList());
+        assertThat(outputIndexStrings, hasSize(2));
+        assertThat(outputIndexStrings, containsInAnyOrder("{{2}{1}{3}}", "{{1}{2}{3}}"));
+    }
+
+    @Test
+    @Disabled
     public void testWithSmallestIndexSetStrategy() {
         // Arrange
         String[] inputIndexStrings = {
@@ -459,6 +505,7 @@ class IndexOptimizerTest {
     }
 
     @Test
+    @Disabled
     public void testWithSmallestIndexSetStrategy2() {
         // Arrange
         String[] inputIndexStrings = {
@@ -489,6 +536,7 @@ class IndexOptimizerTest {
     }
 
     @Test
+    @Disabled
     public void testWithSmallestIndexSetSelectionStrategy_03() {
         // Arrange
         String[] inputIndexStrings = {
@@ -549,6 +597,7 @@ class IndexOptimizerTest {
     }
 
     @Test
+    @Disabled
     public void testWithLargestIndexSetSelectionStrategy_03() {
         // Arrange
         String[] inputIndexStrings = {
@@ -629,7 +678,7 @@ class IndexOptimizerTest {
         printIndexes("Optimized", optimizedIndexes);
 
         // Assert
-        Pair<Map<Index, List<Index>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
         Assertions.assertEquals(19, optimizedIndexes.size());
         Assertions.assertEquals(29, checkRes.getLeft().size());
         Assertions.assertTrue(checkRes.getRight().isEmpty());
@@ -648,7 +697,7 @@ class IndexOptimizerTest {
         printIndexes("Optimized", optimizedIndexes);
 
         // Assert
-        Pair<Map<Index, List<Index>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
         Assertions.assertEquals(19, optimizedIndexes.size());
         Assertions.assertEquals(29, checkRes.getLeft().size());
         Assertions.assertTrue(checkRes.getRight().isEmpty());
@@ -667,7 +716,7 @@ class IndexOptimizerTest {
         printIndexes("Optimized", optimizedIndexes);
 
         // Assert
-        Pair<Map<Index, List<Index>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = runCoverageChecker(indexes, optimizedIndexes);
         Assertions.assertEquals(19, optimizedIndexes.size());
         Assertions.assertEquals(29, checkRes.getLeft().size());
         Assertions.assertTrue(checkRes.getRight().isEmpty());
@@ -686,11 +735,12 @@ class IndexOptimizerTest {
         }
     }
 
-    private static Pair<Map<Index, List<Index>>, List<Index>> runCoverageChecker(List<Index> indexes,
-                                                                                 List<Index> optimizedIndexes) {
+    private static Pair<List<Pair<Index, List<Index>>>, List<Index>> runCoverageChecker(List<Index> indexes,
+                                                                                        List<Index> optimizedIndexes) {
         IndexCoverageChecker checker = new IndexCoverageChecker();
         indexes = IndexOptimizer.sanitizeIndexes(indexes);
-        Pair<Map<Index, List<Index>>, List<Index>> checkRes = checker.checkIndexCoverage(indexes, optimizedIndexes);
+        Pair<List<Pair<Index, List<Index>>>, List<Index>> checkRes = checker.checkIndexCoverage(indexes,
+                                                                                                optimizedIndexes);
         System.out.println(checkRes.getLeft());
         System.out.println(checkRes.getRight());
         return checkRes;

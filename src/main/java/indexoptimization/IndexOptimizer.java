@@ -9,7 +9,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,6 +18,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
+
+import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
 
 /**
  * IndexOptimizer generates an optimal subset of indexes, based on the set of indexes provided as input.
@@ -223,9 +225,9 @@ public class IndexOptimizer {
         for (Index index : indexes) {
             List<IndexFieldSet> newFieldSets = new ArrayList<>();
             for (IndexFieldSet fieldSet : index.fieldSets) {
-                Set<IndexField> indexFields = fieldSet.getFields().stream()
+                List<IndexField> indexFields = fieldSet.getFields().stream()
                         .map(f -> new IndexField(mapping.getOrDefault(f.getName(), f.getName())))
-                        .collect(Collectors.toSet());
+                        .collect(Collectors.toList());
                 IndexFieldSet newIndexFieldSet = new IndexFieldSet(indexFields);
                 newFieldSets.add(newIndexFieldSet);
             }
@@ -324,7 +326,7 @@ public class IndexOptimizer {
             Index containingIndex = cc.getRight();
 
             List<Index> indexesAfterRemovingOne = removeIndex(containedIndex, indexes);
-            Index constrainedContainingIndex = addConstraintsToContainingIndex(containedIndex, containingIndex);
+            Index constrainedContainingIndex = mergeIndexPair(containedIndex, containingIndex);
             List<Index> indexesAfterRemovingOneAndConstraining = replaceContainingWithConstrained(
                     containingIndex,
                     constrainedContainingIndex,
@@ -383,7 +385,7 @@ public class IndexOptimizer {
     private List<Index> removeIndex(Index contained, List<Index> indexes) {
         List<Index> newList = new ArrayList<>(indexes.size() - 1);
         for (Index index : indexes) {
-            if (!index.equals(contained)) {
+            if (index != contained) {
                 newList.add(index);
 
             } // else skip (remove)
@@ -467,62 +469,68 @@ public class IndexOptimizer {
     }
 
     static boolean isContained(Index containedIndex, Index containingIndex) {
-        int i; // i -> curr. field set in contained index
-        int j = 0; // j -> curr. field set in containing index
-        int m = 0; // matched in current field set
-        for (i = 0; i < containedIndex.getFieldSets().size(); i++) {
-            if (j == containingIndex.getFieldSets().size()) {
-                // all containing containing index field sets were used up, and the containing index is not covered
-                return false;
-            }
-            for (IndexField fieldInContained: containedIndex.getFieldSets().get(i).getFields()) {
-                if (containingIndex.getFieldSets().get(j).contains(fieldInContained)) {
-                    m++;
-                } else {
-                    return false;
-                }
-            }
-            if (m == containingIndex.getFieldSets().get(j).getLength()) {
-                // all fields in containing field set were used up, move to the next group
-                // m cannot be greater than length, otherwise, false would be returned above
-                m = 0; // reset the counter
-                j++; // move to the next field set in containing index
-            }
-        }
-        return true;
+        List<IndexFieldSet> prefix = findLongestCommonPrefix(containingIndex, containedIndex);
+        return new Index(prefix).getLength() == containedIndex.getLength();
     }
 
-    private static Index addConstraintsToContainingIndex(Index containedIndex, Index containingIndex) {
-        //add constraints on the prefix -> the prefix needs to contain fields of the remove index
-        //which means: move the elements from the field sets of the removed index to the front of the constrained index
-        //and remove them form the remaining groups in the constrained index
+    public static List<IndexFieldSet> findLongestCommonPrefix(Index input1, Index input2) {
+        if (input1.getLength() == 0 || input2.getLength() == 0) {
+            return emptyList();
+        }
 
-        Index constrainedIndex = new Index();
-        for (IndexFieldSet fieldSet : containedIndex.getFieldSets()) {
-            constrainedIndex.addFieldSet(fieldSet);
-        }
-        List<IndexField> fieldsToRemoveInTail = containedIndex.getFieldSets().stream()
-                .flatMap(fs -> fs.getFields().stream())
-                .collect(Collectors.toCollection(LinkedList::new));
-        for (IndexFieldSet fieldSet : containingIndex.getFieldSets()) {
-            if (!fieldsToRemoveInTail.isEmpty()) {
-                IndexField toRemove = fieldsToRemoveInTail.get(0);
-                if (fieldSet.contains(toRemove)) {
-                    //make a copy:
-                    fieldSet = new IndexFieldSet(fieldSet.getFields());
-                }
-                while (!fieldsToRemoveInTail.isEmpty() && fieldSet.contains(toRemove)) {
-                    fieldSet.remove(toRemove);
-                    fieldsToRemoveInTail.remove(0);
-                    if (! fieldsToRemoveInTail.isEmpty()) {
-                        toRemove = fieldsToRemoveInTail.get(0);
-                    }
-                }
-            }
-            if (fieldSet.getLength() > 0) {
-                constrainedIndex.addFieldSet(fieldSet);
+        //copy indexes so we can modify them
+        Index index1 = input1.copy();
+        Index index2 = input2.copy();
+
+        //discard empty field sets
+        for (Index index : List.of(index1, index2)) {
+            if (index.getFieldSets().get(0).getLength() == 0) {
+                index.removeFieldSet(index.getFieldSets().get(0));
+                return findLongestCommonPrefix(index1, index2);
             }
         }
+
+        //remove common fields from both field sets
+        IndexFieldSet fs1 = index1.getFieldSets().get(0);
+        IndexFieldSet fs2 = index2.getFieldSets().get(0);
+        List<IndexField> commonFields = findCommonFields(fs1, fs2);
+        if (commonFields.isEmpty()) {
+            return emptyList(); //no prefix possible as there are no common fields in the first FS of each index
+        }
+        commonFields.forEach(fs1::remove);
+        commonFields.forEach(fs2::remove);
+
+        //build prefix (field set with common fields + longest common prefix for remaining fields)
+        ArrayList<IndexFieldSet> result = new ArrayList<>();
+        result.add(new IndexFieldSet(commonFields));
+        result.addAll(findLongestCommonPrefix(index1, index2));
+        return result;
+    }
+
+    private static List<IndexField> findCommonFields(IndexFieldSet set1, IndexFieldSet set2) {
+        return set1.getFields().stream()
+                .filter(field -> set2.getFields().contains(field))
+                .collect(toList());
+    }
+
+    private Index mergeIndexPair(Index contained, Index containing) {
+        contained = contained.copy();
+        containing = containing.copy();
+        List<IndexFieldSet> prefix = findLongestCommonPrefix(contained, containing);
+        Index constrainedIndex = new Index(prefix);
+        Set<IndexField> prefixFields = new HashSet<>(constrainedIndex.getFields());
+
+        //add remaining fields (and field sets) that are not present in the prefix
+        for (IndexFieldSet fs : containing.getFieldSets()) {
+            IndexFieldSet indexFieldSet = new IndexFieldSet();
+            fs.getFields().stream()
+                    .filter(f -> !prefixFields.contains(f))
+                    .forEach(indexFieldSet::add);
+            if (!indexFieldSet.getFields().isEmpty()) {
+                constrainedIndex.addFieldSet(indexFieldSet);
+            }
+        }
+
         return constrainedIndex;
     }
 

@@ -1,24 +1,24 @@
 package indexoptimization;
 
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class IndexFieldSet {
-    private final Set<IndexField> fields;
+    private final List<IndexField> fields;
 
     public IndexFieldSet() {
-        fields = new HashSet<>();
+        fields = new ArrayList<>();
     }
 
-    public IndexFieldSet(Set<IndexField> fields) {
+    public IndexFieldSet(List<IndexField> fields) {
         this();
         this.fields.addAll(fields);
     }
 
-    public Set<IndexField> getFields() {
-        return new LinkedHashSet<>(fields);
+    public List<IndexField> getFields() {
+        return new ArrayList<>(fields);
     }
 
     void add(IndexField field) {
@@ -49,5 +49,24 @@ public class IndexFieldSet {
                 fields.stream().map(IndexField::toString).sorted().collect(Collectors.joining(",")) +
                 "}";
         return sb;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (!(o instanceof IndexFieldSet))
+            return false;
+        IndexFieldSet that = (IndexFieldSet) o;
+        return Objects.equals(fields, that.fields);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(fields);
+    }
+
+    public IndexFieldSet copy(){
+        return new IndexFieldSet(fields);
     }
 }

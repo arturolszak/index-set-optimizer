@@ -2,6 +2,8 @@ package indexoptimization;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Index {
 
@@ -30,10 +32,14 @@ public class Index {
         fieldSets.add(indexFieldSet);
     }
 
+    void removeFieldSet(IndexFieldSet indexFieldSet) {
+        fieldSets.remove(indexFieldSet);
+    }
+
     public int getLength() {
         return fieldSets.stream()
-            .mapToInt(IndexFieldSet::getLength)
-            .sum();
+                .mapToInt(IndexFieldSet::getLength)
+                .sum();
     }
 
     public String toString() {
@@ -60,5 +66,29 @@ public class Index {
         return IndexParser.parseIndex(s);
     }
 
+    public List<IndexField> getFields(){
+        return fieldSets.stream()
+                .flatMap(indexFieldSet -> indexFieldSet.getFields().stream())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (!(o instanceof Index))
+            return false;
+        Index index = (Index) o;
+        return Objects.equals(fieldSets, index.fieldSets);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(fieldSets);
+    }
+
+    public Index copy(){
+        return new Index(fieldSets.stream().map(IndexFieldSet::copy).collect(Collectors.toList()));
+    }
 
 }
