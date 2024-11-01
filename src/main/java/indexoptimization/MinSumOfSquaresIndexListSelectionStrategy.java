@@ -3,18 +3,20 @@ package indexoptimization;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SmallestIndexListSelectionStrategy implements IndexListSelectionStrategy {
+public class MinSumOfSquaresIndexListSelectionStrategy implements IndexListSelectionStrategy {
     @Override
     public List<List<Index>> choseBestIndexSets(List<List<Index>> indexCandidates) {
         //chose the best set (smallest number of indexes)
-        int minSize = -1;
+        int minSumOfSquares = -1;
         List<List<Index>> bestIndexSetList = null;
         for (List<Index> indexes : indexCandidates) {
-            if (minSize == -1 || indexes.size() < minSize) {
+            int sumOfSquares = indexes.stream().mapToInt(Index::getLength).map(len -> len * len).sum();
+            if (minSumOfSquares == -1 || sumOfSquares < minSumOfSquares) {
                 bestIndexSetList = new ArrayList<>();
                 bestIndexSetList.add(indexes);
-                minSize = indexes.size();
-            } else if (indexes.size() == minSize) {
+                minSumOfSquares = sumOfSquares;
+            }
+            else if (sumOfSquares == minSumOfSquares) {
                 bestIndexSetList.add(indexes);
             }
         }
