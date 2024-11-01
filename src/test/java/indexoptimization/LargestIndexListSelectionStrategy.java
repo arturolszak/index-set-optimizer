@@ -1,19 +1,23 @@
 package indexoptimization;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class LargestIndexListSelectionStrategy implements IndexListSelectionStrategy {
     @Override
-    public List<Index> choseBestIndexes(List<List<Index>> indexCandidates) {
-        //chose the best set (largest number of indexes)
+    public List<List<Index>> choseBestIndexSets(List<List<Index>> indexCandidates) {
+        //chose the set with the largest number of indexes
         int maxSize = -1;
-        List<Index> bestIndexList = null;
+        List<List<Index>> bestIndexSetList = null;
         for (List<Index> indexes : indexCandidates) {
             if (indexes.size() > maxSize) {
-                bestIndexList = indexes;
-                maxSize = bestIndexList.size();
+                bestIndexSetList = new ArrayList<>();
+                bestIndexSetList.add(indexes);
+                maxSize = indexes.size();
+            } else if (indexes.size() == maxSize) {
+                bestIndexSetList.add(indexes);
             }
         }
-        return bestIndexList;
+        return bestIndexSetList;
     }
 }
