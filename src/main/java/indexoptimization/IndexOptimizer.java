@@ -220,11 +220,10 @@ public class IndexOptimizer {
             return indexes;
         }
         List<Index> newIndexes = new ArrayList<>();
-        for (int i = 0; i < indexes.size(); i++) {
+        for (Index index : indexes) {
             List<IndexFieldSet> newFieldSets = new ArrayList<>();
-            for (IndexFieldSet fieldSet : indexes.get(i).fieldSets) {
-                Set<IndexField> indexFields = new HashSet<>();
-                indexFields = fieldSet.getFields().stream()
+            for (IndexFieldSet fieldSet : index.fieldSets) {
+                Set<IndexField> indexFields = fieldSet.getFields().stream()
                         .map(f -> new IndexField(mapping.getOrDefault(f.getName(), f.getName())))
                         .collect(Collectors.toSet());
                 IndexFieldSet newIndexFieldSet = new IndexFieldSet(indexFields);
@@ -275,7 +274,7 @@ public class IndexOptimizer {
     private static Index removeEmptyFieldSets(Index index) {
         List<IndexFieldSet> newFieldSets = index.fieldSets.stream()
                 .filter(fieldSet -> fieldSet.getLength() > 0)
-                .collect(Collectors.toCollection(() -> new ArrayList<>()));
+                .collect(Collectors.toCollection(ArrayList::new));
         return new Index(newFieldSets);
     }
 
@@ -376,7 +375,7 @@ public class IndexOptimizer {
 
         containedContainingIndexPairs.subList(from, to).sort(Comparator
                                                                      .comparing(p -> containedCounts.get(((Pair<Index, Index>) p).getRight().toStringSorted()))
-                                                                     .thenComparing(p -> 0 - ((Pair<Index, Index>) p).getRight().getLength())
+                                                                     .thenComparing(p -> -((Pair<Index, Index>) p).getRight().getLength())
                                                                      .thenComparing(p -> ((Pair<Index, Index>) p).getLeft().getLength())
         );
     }
@@ -384,11 +383,10 @@ public class IndexOptimizer {
     private List<Index> removeIndex(Index contained, List<Index> indexes) {
         List<Index> newList = new ArrayList<>(indexes.size() - 1);
         for (Index index : indexes) {
-            if (index.equals(contained)) {
-                //skip (remove)
-            } else {
+            if (!index.equals(contained)) {
                 newList.add(index);
-            }
+
+            } // else skip (remove)
         }
         return newList;
     }

@@ -17,11 +17,6 @@ public class IndexFieldSet {
         this.fields.addAll(fields);
     }
 
-
-    public boolean isInGroup(IndexField field) {
-        return fields.contains(field);
-    }
-
     public Set<IndexField> getFields() {
         return new LinkedHashSet<>(fields);
     }
@@ -43,22 +38,16 @@ public class IndexFieldSet {
     }
 
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        sb.append(
-            fields.stream().map(IndexField::toString).collect(Collectors.joining(","))
-        );
-        sb.append("}");
-        return sb.toString();
+        String sb = "{" +
+                fields.stream().map(IndexField::toString).collect(Collectors.joining(",")) +
+                "}";
+        return sb;
     }
 
     public String toStringSorted() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        sb.append(
-            fields.stream().map(IndexField::toString).sorted().collect(Collectors.joining(","))
-        );
-        sb.append("}");
-        return sb.toString();
+        String sb = "{" +
+                fields.stream().map(IndexField::toString).sorted().collect(Collectors.joining(",")) +
+                "}";
+        return sb;
     }
 }
